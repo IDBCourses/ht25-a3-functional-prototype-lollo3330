@@ -1,11 +1,9 @@
 // ========================================
-// CONSTANTS
+// CONSTANTS - things that stay the same
 // ========================================
 
-// All three maze layouts - each is a 20x20 grid
-// W = Wall, P = Path, T = Trap, X = Teleporter, G = Goal
-const MAZE_POOL = [
-  // Maze 1 - Classic maze with multiple paths
+const mazePool = [
+  // Maze 1
   [
     ["W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W"],
     ["W","P","P","P","W","P","P","P","P","P","P","P","P","P","P","P","P","P","T","W"],
@@ -29,7 +27,7 @@ const MAZE_POOL = [
     ["W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W"],
   ],
 
-  // Maze 2 - Spiral pattern with center goal
+  // Maze 2
   [
     ["W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W"],
     ["W","P","P","P","P","P","P","P","P","P","P","P","P","P","P","P","P","P","P","W"],
@@ -53,7 +51,7 @@ const MAZE_POOL = [
     ["W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W"],
   ],
 
-  // Maze 3 - Grid pattern with scattered traps
+  // Maze 3
   [
     ["W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W"],
     ["W","P","P","P","P","P","W","P","P","P","P","P","W","P","P","W","P","P","G","W"],
@@ -78,8 +76,8 @@ const MAZE_POOL = [
   ]
 ];
 
-// Teleporter pairs - when you step on position [x,y], you go to the destination
-const TELEPORT_MAP = {
+// Teleport locations, when you step on position [x,y], you go to position [x,y]
+const teleportLocations = {
   "15,4": [12, 12],   // Teleporter 1 ⇄ Teleporter 2
   "12,12": [15, 4],
   "16,3": [11, 18],   // Teleporter 3 ⇄ Teleporter 4
@@ -88,42 +86,33 @@ const TELEPORT_MAP = {
   "18,4": [10, 18],
 };
 
-// Game settings
-const INITIAL_TIME = 30;              // Seconds per game
-const REPEAT_WARNING_THRESHOLD = 7;   // Show hint after this many same-direction moves
+const startTime = 30;              // Seconds per game
+const maxSameDirectionMoves = 5;   // Show message after this many same-direction moves
+
+// ========================================
+// STATE VARIABLES - variables that change over time
+// ========================================
+
+let maze = [];                  // Stores the current maze grid
+let playerX = 1;                // Tracks the playershorizontal position
+let playerY = 1;                // Tracks the players vertical position
+let gameEnded = false;          // indicate if the game has ended
+let justTeleported = false;     // Flags if the player just used a teleporter (prevents re-teleport)
+let currentMazeIndex = 0;       // Index of the active maze (1, 2, or 3)
+let timeLeft = startTime;       // Remaining time in the countdown
+let timerInterval = null;       // Reference to the active timer interval (stop or reset)
+let lastDirection = null;       // Stores the most recent movement direction
+let repeatCount = 0;            // Tracks how many times the player moved in the same direction
+let repeatMessageTimeout = null; // Holds the timeout for message
 
 
 // ========================================
-// 📊 STATE VARIABLES
+// SETUP
 // ========================================
 
-let maze = [];                  // Current maze grid (working copy)
-let playerX = 1;                // Player column position
-let playerY = 1;                // Player row position
-let gameEnded = false;          // Is game over?
-let justTeleported = false;     // Just used teleporter? (prevents re-teleport)
-let currentMazeIndex = 0;       // Which maze are we playing? (0, 1, or 2)
-let timeLeft = INITIAL_TIME;    // Countdown timer value
-let timerInterval = null;       // Timer reference for stopping/starting
-
-// Movement tracking
-let lastDirection = null;       // Last direction player moved
-let repeatCount = 0;            // How many times moved same direction
-let repeatMessageTimeout = null; // Timeout for clearing hint message
-
-
-// ========================================
-// 🚀 SETUP
-// ========================================
-
-/**
- * Initializes/restarts the game
- * Called on page load and when reset button is clicked
- */
 function setup() {
-  // Copy selected maze from pool (don't modify original)
-  const selectedMaze = MAZE_POOL[currentMazeIndex];
-  maze = selectedMaze.map(row => [...row]);
+  const selectedMaze = mazePool[currentMazeIndex]; // selects maze index from pool
+  maze = selectedMaze.map(row => [...row]); // draws up the maze row by row
   
   // Reset player to starting position
   playerX = 1;
@@ -139,37 +128,14 @@ function setup() {
   startTimer();
   
   // Draw the maze
-  render();
+  showMaze();
 }
 
-/**
- * Starts the countdown timer
- */
-function startTimer() {
-  timeLeft = INITIAL_TIME;
-  updateTimerDisplay();
-
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    updateTimerDisplay();
-
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      gameEnded = true;
-      document.getElementById("outcome").textContent = "⏰ Time's up! You lost. ⏰";
-    }
-  }, 1000);
-}
-
-
 // ========================================
-// 🎨 RENDER
+// DISPLAY MAZE
 // ========================================
 
-/**
- * Draws the entire maze to the screen
- */
-function render() {
+function showMaze() {
   const mazeContainer = document.getElementById("maze");
   mazeContainer.innerHTML = "";
 
@@ -179,17 +145,16 @@ function render() {
       cell.classList.add("cell");
 
       // Style cell based on tile type and player position
-      applyCellStyling(cell, maze[y][x], x, y);
+      cellStyling(cell, maze[y][x], x, y);
 
       mazeContainer.appendChild(cell);
     }
   }
 }
 
-/**
- * Applies styling to a single maze cell
- */
-function applyCellStyling(cell, tileType, x, y) {
+// Styling for each cell
+
+function cellStyling(cell, tileType, x, y) {
   // Player overrides tile display
   if (x === playerX && y === playerY) {
     cell.classList.add("player");
@@ -197,7 +162,6 @@ function applyCellStyling(cell, tileType, x, y) {
     return;
   }
 
-  // Style based on tile type
   switch (tileType) {
     case "W": // Wall
       cell.classList.add("wall");
@@ -219,15 +183,12 @@ function applyCellStyling(cell, tileType, x, y) {
 
 
 // ========================================
-// 🎮 INPUT HANDLING
+// KEYBOARD MOVEMENT
 // ========================================
 
-/**
- * Handles keyboard input for movement and teleporting
- */
-document.addEventListener("keydown", (e) => {
+function handleKeyPress(e) {
   if (gameEnded) return;
-
+  
   const key = e.key.toUpperCase();
 
   // Spacebar = Teleport
@@ -253,20 +214,11 @@ document.addEventListener("keydown", (e) => {
   if (isValidMove(newPos.x, newPos.y)) {
     playerX = newPos.x;
     playerY = newPos.y;
-    render();
+    showMaze();
     checkOutcome();
   }
-});
+}
 
-
-// ========================================
-// 🧮 GAME LOGIC FUNCTIONS
-// ========================================
-
-/**
- * Calculates new position based on key pressed
- * Returns: { x, y, direction }
- */
 function calculateNewPosition(key) {
   let newX = playerX;
   let newY = playerY;
@@ -289,9 +241,7 @@ function calculateNewPosition(key) {
   return { x: newX, y: newY, direction };
 }
 
-/**
- * Checks if position is valid (in bounds and not a wall)
- */
+// Checks if position is valid (in bounds and not a wall)
 function isValidMove(x, y) {
   return (
     y >= 0 && y < maze.length &&
@@ -300,29 +250,29 @@ function isValidMove(x, y) {
   );
 }
 
-/**
- * Teleports player to paired destination
- */
+// Teleports player to paired destination
 function handleTeleport() {
   const currentPosKey = `${playerX},${playerY}`;
   const currentTile = maze[playerY][playerX];
 
-  if (currentTile === "X" && TELEPORT_MAP[currentPosKey]) {
+  if (currentTile === "X" && teleportLocations[currentPosKey]) {
     justTeleported = true;
-    const [destX, destY] = TELEPORT_MAP[currentPosKey];
+    const [destX, destY] = teleportLocations[currentPosKey];
     
     playerX = destX;
     playerY = destY;
     
     document.getElementById("outcome").textContent = `👀 Teleported to (${destX}, ${destY})! 👀`;
-    render();
+    showMaze();
     checkOutcome();
   }
 }
 
-/**
- * Checks what tile player is on and updates game state
- */
+// ========================================
+// FUNCTIONS
+// ========================================
+
+//Checks what tile player is on and updates game state
 function checkOutcome() {
   const outcome = document.getElementById("outcome");
   const currentTile = maze[playerY][playerX];
@@ -343,15 +293,15 @@ function checkOutcome() {
     return;
   }
 
-  // Teleporter prompt
+  // Teleporter
   if (currentTile === "X" && !justTeleported) {
     outcome.textContent = "🕳 Click spacebar to teleport! 🕳";
     return;
   }
 
-  // Repeat movement warning
-  if (!justTeleported && repeatCount > REPEAT_WARNING_THRESHOLD) {
-    outcome.textContent = "😅 Still going that way? Try exploring!";
+  // Repeat movement
+  if (!justTeleported && repeatCount > maxSameDirectionMoves) {
+    outcome.textContent = "💨 Try HOLDING the key to move quicker! 💨";
     return;
   }
 
@@ -361,16 +311,15 @@ function checkOutcome() {
   }
 }
 
-/**
- * Tracks repeated movements in same direction
- */
+//Tracks repeated movements in same direction
+
 function trackRepeatedMovement(direction) {
   if (direction === lastDirection) {
     repeatCount++;
     
-    if (repeatCount > REPEAT_WARNING_THRESHOLD) {
+    if (repeatCount > maxSameDirectionMoves) {
       const outcome = document.getElementById("outcome");
-      outcome.textContent = "😅 Still going that way? Try exploring!";
+      outcome.textContent = "Try holding the key to move quicker!";
       
       clearTimeout(repeatMessageTimeout);
       repeatMessageTimeout = setTimeout(() => {
@@ -383,37 +332,46 @@ function trackRepeatedMovement(direction) {
   }
 }
 
+function startTimer() {
+  timeLeft = startTime;
+  updateTimerDisplay();
 
-// ========================================
-// 🛠️ UTILITY FUNCTIONS
-// ========================================
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
 
-/**
- * Updates timer display in UI
- */
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      gameEnded = true;
+      document.getElementById("outcome").textContent = "⏰ Time's up! You lost. ⏰";
+    }
+  }, 1000);
+}
+
 function updateTimerDisplay() {
   document.getElementById("timer").textContent = `⏳ Time left: ${timeLeft}s`;
 }
 
 
 // ========================================
-// 🎛️ EVENT LISTENERS
+// EVENT LISTENERS
 // ========================================
 
-/**
- * Reset button - restarts game or loads next maze
- */
+// Keyboard controls
+document.addEventListener("keydown", handleKeyPress);
+
+// Reset button
 document.getElementById("resetBtn").addEventListener("click", () => {
   if (gameEnded) {
-    // Cycle to next maze
-    currentMazeIndex = (currentMazeIndex + 1) % MAZE_POOL.length;
-  }
-  setup();
+// Cycle to next maze
+currentMazeIndex = (currentMazeIndex + 1) % mazePool.length;
+}
+setup();
 });
 
 
 // ========================================
-// ▶️ START GAME
+// START GAME
 // ========================================
 
 setup();
