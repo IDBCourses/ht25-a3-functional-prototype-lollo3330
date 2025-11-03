@@ -1,5 +1,5 @@
 // ========================================
-// 🎯 CONSTANTS
+// CONSTANTS
 // ========================================
 
 // All three maze layouts - each is a 20x20 grid
