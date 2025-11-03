@@ -1,19 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="script.js" type="module"></script>
-    <link rel="stylesheet" href="style.css">
-    <title>Code Playground</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maze Shift</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
+  <h1>Maze Game</h1>
+  <p id="instructions">
+    Use your keyboard to move: <br>
+    <strong>UP = Top row </strong>(QWERTYUIOP) <br>
+    <strong>LEFT/RIGHT = Middle row </strong> (ASDFG/HJKL) <br>
+    <strong>DOWN = Bottom row </strong>(ZXCVBNM)<br>
+    Click <strong>SPACE</strong> while on a teleporter to teleport!<br>
+    🏁 = Goal | 💣" = Trap | 🕳 = Teleporter
+    <div id="timer">⏳ Time left: 30s</div>
 
-    <div id="thing0" class="thing"></div>
+  </p>
+  <div id="maze"></div>
+  <p id="outcome"></p>
+  <button id="resetBtn">Reset Game</button>
 
+  <script src="script.js"></script>
 </body>
-
 </html>
