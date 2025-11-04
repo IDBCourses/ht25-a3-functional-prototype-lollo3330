@@ -17,6 +17,13 @@ h1 {
   font-size: 14px;
 }
 
+#timer {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 15px 0;
+  color: #430228;
+}
+
 #outcome {
   font-size: 20px;
   margin-top: 20px;
@@ -47,6 +54,21 @@ h1 {
 
 .wall {
   background-color: #5e0237;
+}
+
+.goal {
+  visibility: inherit;
+  /* Emoji only — no background styling needed */
+}
+
+.trap {
+  visibility: inherit;
+  /* Emoji only — no background styling needed */
+}
+
+.teleporter {
+  visibility: inherit;
+  /* Emoji only — no background styling needed */
 }
 
 .player {
